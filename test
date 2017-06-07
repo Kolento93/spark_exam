@@ -1,0 +1,55 @@
+//scala examples
+//Lecture2 exercise
+import breeze.linalg._
+import breeze.stats.distributions._
+import breeze.numerics._
+val mu = DenseVector(10.0,-10.0)
+val sigma = DenseMatrix((1.0,0.5),(0.5,1.0))
+val ran_m_g = new MultivariateGaussian(mu,sigma)
+val data = ran_m_g.sample(100000)
+
+val result1 = data.map(x=>(x(0)*x(0)*x(1)*x(1))).reduce(_+_)/100000.0
+val result2 = data.map(x=>(DenseMatrix((math.pow(x(0),2),x(0)*x(1)),(x(0)*x(1),math.pow(x(1),2))))).reduce(_+_)/100000.0
+val result3 = data.map(x=>(DenseMatrix((sin(math.pow(x(0),2)),cos(x(0)*x(1))),(cos(x(0)*x(1)),sin(math.pow(x(1),2)))))).reduce(_+_)/100000.0
+
+//Lecture3 产生1000个服从分布exp（1）的随机数----逆分布法
+import java.util.concurrent.ThreadLocalRandom
+val r = ThreadLocalRandom.current//U(0,1)随机数发生器
+val OurExpRVs = (1 to 1000).map(x=> r.nextDouble).map(x => -math.log(x)).toArray[Double]//通过求解反函数，带入得到指定分布的随机数
+
+//Lecture 3 拒绝接受法产生随机数
+val ran_n = new Gaussian(0,1)
+val ran_u = new Uniform(0,1)
+val c = 6.84
+val data = new Uniform(1000)
+
+def f(x:Double):Double = {
+	var a = x
+	if (x <= -0.75 & x >= -1.25) {a = -x}
+	else if (x <= 1.25 & x >= 0.75) {a = x}
+	else {a = NaN}
+	a}
+
+def judge(x:Double):Double = {
+	var b = x
+	if (x <= f(x)/(c*ran_n.pdf(x))){b = x}
+	else {b = 0.0}
+	b}
+val result = data.map(x=>judge(x(0))).toArray
+
+//Lecture3 从回归模型中模拟随机数据
+val n = 50
+val m = 400
+val beta = DenseVector.zeros[Double](n)
+beta(0 to 9) := 2.0
+
+val ran_n = new Gaussian(0,1)
+
+val data = 
+	for (i<-1 to m) yield{(DenseVector(ran_n.sample(50).toArray),ran_n.sample(1)(0))}
+
+val result = data.map(x=>(
+	math.log(abs(x._1.t * beta)) + norm(x._1) * x._2))
+
+
+//
